@@ -56,9 +56,12 @@ Everything is driven by environment variables. **No secrets are hardcoded.** Con
 
 ### Notification channels (configure at least one)
 
-**Where to set these:** in Qinglong, open the panel's **Environment Variables (环境变量)** page and add each variable there. Running standalone, `export` them (or prefix them on the command line) before launching the script. Configure as many channels as you like — every configured one fires.
+**Where to set these:** all channels are listed **together at the top of `ssh_brute_alert.py`** (the "通知通道集中配置区 / notification config block"), each with an inline comment showing **where to fill / format / example** — just like a typical Qinglong startup script. You can either:
 
-Each section below shows the **exact value format** and an example (example values are placeholders — replace with your own).
+- **Recommended (Qinglong):** leave the script untouched and set the variables on the panel's **Environment Variables (环境变量)** page (so upgrades don't wipe your config), or
+- **Standalone:** edit the default values directly in that config block, or `export` the variables before running.
+
+Configure as many channels as you like — every configured one fires. The reference below repeats each channel's exact format and an example (example values are placeholders — replace with your own).
 
 #### WeCom App / 企业微信应用 — `QYWX_AM`
 
