@@ -49,6 +49,50 @@ HOSTNAME    = socket.gethostname()
 # =================================================
 
 
+# ============ 通知通道集中配置区 (优先读环境变量, 为空取右侧默认值) ============
+#   • 青龙用户: 建议在【环境变量】页面填, 不要直接改本文件 (升级不丢配置)。
+#   • 独立运行: 可直接把下面引号里的默认值改成你自己的, 或用环境变量覆盖。
+#   • 配了哪个就发哪个, 可同时配多个; 全为空则回退青龙自带 notify。
+# ---------------------------------------------------------------------------
+
+# 1. 企业微信应用   格式: corpid,secret,touser,agentid  (逗号分隔, 顺序固定, 共4段)
+#    示例: ww1a2b3c4d5e6f7g,abcDEF-xxxxxxxxxxxxxxxxxxxxxxxx,@all,1000002
+#    corpid=企业ID  secret=应用Secret  touser=接收人(@all=所有人)  agentid=应用AgentId(数字)
+#    ⚠️ 顺序别搞错! touser 在前、agentid 在后 (与青龙一致)。
+QYWX_AM         = os.environ.get("QYWX_AM",         "").strip()   # 例: ww1a2b...,SECRET,@all,1000002
+
+# 2. 企业微信机器人  填: 群机器人 webhook URL 里 key= 后面那串
+QYWX_KEY        = os.environ.get("QYWX_KEY",        "").strip()   # 例: 693a91f6-xxxx-xxxx-xxxx-xxxxxxxx5aaa
+
+# 3. Telegram       填: BotFather 给的 Token + 你的数字 chat_id (@userinfobot 查)
+TG_BOT_TOKEN    = os.environ.get("TG_BOT_TOKEN",    "").strip()   # 例: 123456789:AAExxxxxxxxxxxxxxxxxxxxxxxx
+TG_USER_ID      = os.environ.get("TG_USER_ID",      "").strip()   # 例: 87654321
+TG_API_HOST     = os.environ.get("TG_API_HOST",     "").strip()   # 可选, 自建反代, 例: https://tg.example.com
+
+# 4. Bark(iOS)      填: 完整推送URL 或 仅 device key
+BARK_PUSH       = os.environ.get("BARK_PUSH",       "").strip()   # 例: https://api.day.app/AbCdEf123456  或  AbCdEf123456
+
+# 5. Server酱       填: SendKey (Turbo版以 SCT 开头, 旧版以 SC 开头)
+PUSH_KEY        = os.environ.get("PUSH_KEY",        "").strip()   # 例: SCT123456TxxxxxxxxxxxxxxxxxxDEF
+
+# 6. 钉钉机器人     填: webhook URL 里 access_token= 后那串; 若开了"加签"再填 secret
+DD_BOT_TOKEN    = os.environ.get("DD_BOT_TOKEN",    "").strip()   # 例: a1b2c3d4e5f6xxxxxxxxxxxxxxxxxxxx
+DD_BOT_SECRET   = os.environ.get("DD_BOT_SECRET",   "").strip()   # 例: SECxxxxxxxxxxxxxxxxxxxxxxxx (未开加签留空)
+
+# 7. PushPlus       填: pushplus.plus 的 token
+PUSH_PLUS_TOKEN = os.environ.get("PUSH_PLUS_TOKEN", "").strip()   # 例: a1b2c3d4e5f6g7h8xxxxxxxxxxxxxxxx
+
+# 8. Gotify         填: 服务器URL + 应用Token
+GOTIFY_URL      = os.environ.get("GOTIFY_URL",      "").strip()   # 例: https://gotify.example.com
+GOTIFY_TOKEN    = os.environ.get("GOTIFY_TOKEN",    "").strip()   # 例: AbCdxxxxxxxxxxx
+
+# 9. 通用Webhook    填: 任意接收 POST JSON {title, content} 的URL
+WEBHOOK_URL     = os.environ.get("WEBHOOK_URL",     "").strip()   # 例: https://your-endpoint.example.com/hook
+
+# 10. 青龙 notify   无需填, 上面全空时自动兜底, 复用青龙已配的全部渠道。
+# ===========================================================================
+
+
 # ---------- 连接统计 ----------
 def count_ssh_conns(port):
     port_hex = f"{port:04X}"
@@ -115,8 +159,9 @@ def _env(name):
 
 
 # ---------- 各推送渠道 (返回 True=成功, 抛异常=失败, 返回 None=未配置跳过) ----------
+#            (读取顶部"通知通道集中配置区"的变量, 别在这里各自读环境变量)
 def ch_qywx_app(title, content):
-    am = _env("QYWX_AM")
+    am = QYWX_AM
     if not am:
         return None
     # QYWX_AM 格式 (逗号分隔): corpid,secret,touser,agentid  (与青龙/甲骨文脚本一致)
@@ -124,7 +169,7 @@ def ch_qywx_app(title, content):
     if len(parts) < 4:
         raise RuntimeError(f"QYWX_AM 段数不足 (需≥4: corpid,secret,touser,agentid; 实为 {len(parts)})")
     corpid, corpsecret, touser, agentid = parts[0], parts[1], parts[2], parts[3]
-    origin = _env("QYWX_ORIGIN") or "https://qyapi.weixin.qq.com"
+    origin = os.environ.get("QYWX_ORIGIN", "").strip() or "https://qyapi.weixin.qq.com"
     tok = _get(f"{origin}/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}")
     at = tok["access_token"]
     res = _post(f"{origin}/cgi-bin/message/send?access_token={at}",
@@ -136,7 +181,7 @@ def ch_qywx_app(title, content):
 
 
 def ch_qywx_bot(title, content):
-    key = _env("QYWX_KEY")
+    key = QYWX_KEY
     if not key:
         return None
     res = _post(f"https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={key}",
@@ -147,11 +192,11 @@ def ch_qywx_bot(title, content):
 
 
 def ch_telegram(title, content):
-    token = _env("TG_BOT_TOKEN")
-    uid = _env("TG_USER_ID")
+    token = TG_BOT_TOKEN
+    uid = TG_USER_ID
     if not (token and uid):
         return None
-    host = _env("TG_API_HOST") or "https://api.telegram.org"
+    host = TG_API_HOST or "https://api.telegram.org"
     res = _post(f"{host}/bot{token}/sendMessage",
                 {"chat_id": uid, "text": f"{title}\n\n{content}"}, is_json=False)
     if not res.get("ok"):
@@ -160,7 +205,7 @@ def ch_telegram(title, content):
 
 
 def ch_bark(title, content):
-    bark = _env("BARK_PUSH")
+    bark = BARK_PUSH
     if not bark:
         return None
     if not bark.startswith("http"):
@@ -171,7 +216,7 @@ def ch_bark(title, content):
 
 
 def ch_serverchan(title, content):
-    key = _env("PUSH_KEY")
+    key = PUSH_KEY
     if not key:
         return None
     url = f"https://sctapi.ftqq.com/{key}.send" if key.startswith("SCT") \
@@ -183,8 +228,8 @@ def ch_serverchan(title, content):
 
 
 def ch_dingtalk(title, content):
-    token = _env("DD_BOT_TOKEN")
-    secret = _env("DD_BOT_SECRET")
+    token = DD_BOT_TOKEN
+    secret = DD_BOT_SECRET
     if not token:
         return None
     url = f"https://oapi.dingtalk.com/robot/send?access_token={token}"
@@ -200,7 +245,7 @@ def ch_dingtalk(title, content):
 
 
 def ch_pushplus(title, content):
-    token = _env("PUSH_PLUS_TOKEN")
+    token = PUSH_PLUS_TOKEN
     if not token:
         return None
     res = _post("http://www.pushplus.plus/send",
@@ -211,8 +256,8 @@ def ch_pushplus(title, content):
 
 
 def ch_gotify(title, content):
-    url = _env("GOTIFY_URL")
-    token = _env("GOTIFY_TOKEN")
+    url = GOTIFY_URL
+    token = GOTIFY_TOKEN
     if not (url and token):
         return None
     res = _post(f"{url.rstrip('/')}/message?token={token}",
@@ -223,7 +268,7 @@ def ch_gotify(title, content):
 
 
 def ch_webhook(title, content):
-    url = _env("WEBHOOK_URL")
+    url = WEBHOOK_URL
     if not url:
         return None
     _post(url, {"title": title, "content": content})
