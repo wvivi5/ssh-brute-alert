@@ -1,5 +1,7 @@
 # ssh-brute-alert
 
+**English** | [简体中文](README.zh-CN.md)
+
 A lightweight, zero-dependency SSH brute-force detector for [Qinglong (青龙面板)](https://github.com/whyour/qinglong) — or any Linux host.
 
 It watches the **number of concurrent connections to your local SSH port**. Normal usage sits at 1–3 connections; a public-facing dictionary attack spikes it to dozens within seconds. When the count crosses a threshold, it pushes an alert through whichever notification channels you've configured, and sends a "recovered" notice once things calm down.
