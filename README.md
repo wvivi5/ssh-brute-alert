@@ -4,6 +4,19 @@ A lightweight, zero-dependency SSH brute-force detector for [Qinglong (青龙面
 
 It watches the **number of concurrent connections to your local SSH port**. Normal usage sits at 1–3 connections; a public-facing dictionary attack spikes it to dozens within seconds. When the count crosses a threshold, it pushes an alert through whichever notification channels you've configured, and sends a "recovered" notice once things calm down.
 
+## Best fit: devices exposed through a tunnel (FRP / port forwarding)
+
+This tool is **especially useful for devices reached over an intranet-penetration tunnel** — cheap SBCs, mini boxes, portable Wi-Fi/4G routers, home NAS, etc. whose SSH is forwarded to a public port via **FRP, ngrok, or similar port forwarding**.
+
+Why these devices are the sweet spot:
+
+- Their SSH becomes reachable on a public port, so scanners find and brute-force them constantly.
+- Because the tunnel forwards to `127.0.0.1:22`, the attacker's real IP is **rewritten to `127.0.0.1`** — so `auth.log`-based tools and `fail2ban` are blind or counterproductive.
+- These devices are often low-power (limited RAM/CPU), and a brute-force storm can spike load and even hang the box. Early detection lets you react (change the tunnel port, add a key) before it falls over.
+- The script reads only `/proc/net/tcp` and needs **no extra packages, no log access, no root-level config changes** — ideal for constrained/embedded systems where installing heavier tooling is painful.
+
+If you run Qinglong (or any host-network Docker container) on such a device, drop this in as a scheduled task and you get connection-table-based brute-force alerts for free.
+
 ## How it works
 
 - Reads `/proc/net/tcp` and `/proc/net/tcp6` to count connections to the monitored SSH port.
