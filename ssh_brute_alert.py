@@ -10,8 +10,13 @@ SSH 爆破监控告警脚本 (青龙面板 / 通用)
 SSH 端口的并发连接数: 正常 1~3 个, 被公网扫描器字典爆破时会瞬间冲到几十个。
 超过阈值即推送告警, 且不读 auth.log (容器读不到宿主日志)、不动任何系统配置。
 
+【重要: 青龙容器必须用 host 网络模式】
+本脚本靠读 /proc/net/tcp 数连接。只有 host 网络模式下, 容器内看到的
+才是宿主机真实连接表; bridge/默认网络模式下只能看到容器自己的连接,
+检测不到宿主机 SSH 爆破。青龙官方镜像默认就是 host 网络, 一般无需改动。
+
 【多渠道通知 —— 全部走环境变量, 零硬编码, 配了哪个就发哪个 (可同时多个)】
-  企业微信应用   QYWX_AM            corpid,corpsecret,agentid,touser[,...]  (@开头脏段自动跳过; touser 缺省=@all)
+  企业微信应用   QYWX_AM            corpid,secret,touser,agentid  (逗号分隔, 顺序固定)
   企业微信机器人 QYWX_KEY           群机器人 webhook 的 key
   Telegram       TG_BOT_TOKEN + TG_USER_ID   (可选 TG_API_HOST 自建反代)
   Bark(iOS)      BARK_PUSH          完整URL 或 device key
